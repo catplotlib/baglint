@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "baglint"
+version = "0.1.0"
+description = "Semantic validation for robotics datasets (MCAP / rosbag2)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mcap>=1.2",
+    "mcap-ros2-support>=0.5",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+baglint = "baglint.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/baglint"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,19 @@
+# Example baglint spec. Topic keys may be glob patterns; the first entry that
+# matches a topic wins, so list specific topics before wildcards.
+
+topics:
+  /joint_states:
+    min_rate: 500
+    max_gap_ms: 10
+
+  /camera/image:
+    min_rate: 25
+    max_gap_ms: 100
+
+  /imu:
+    min_rate: 100
+
+# Not yet implemented -- parsed and validated, but no check consumes it in v0.1.
+transforms:
+  required:
+    - [camera_link, base_link]
