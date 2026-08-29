@@ -5,18 +5,32 @@ spec, and it tells you whether the recording is actually usable — with an exit
 code, so it can gate CI.
 
 ```console
-$ baglint experiment_042.mcap --spec spec.yaml
+$ baglint experiment_042.mcap --spec examples/demo_spec.yaml
 experiment_042.mcap
-  3 topics · 55,140 messages · 18m32s
-
-FAIL /joint_states
-  7 missing interval(s) >10 ms (worst 52.3 ms at 312.40 s)  [log_time]
+  3 topics · 680,884 messages · 18m32s
 
 FAIL /camera/image
   rate 12.4 Hz below minimum 25 Hz  [log_time]
 
-2 findings: 2 FAIL
+FAIL /joint_states
+  3 missing interval(s) >10 ms (worst 122.0 ms at 904.00 s)  [log_time]
+
+FAIL /tf
+  required by spec but no messages in bag
+
+3 findings: 3 FAIL
 ```
+
+That is captured output, not an illustration. Reproduce it with:
+
+```console
+$ python examples/make_demo_bag.py experiment_042.mcap
+$ baglint experiment_042.mcap --spec examples/demo_spec.yaml
+```
+
+The scan above reads 680,884 messages in about six seconds, single-threaded,
+because gap and rate analysis touch only `log_time` and never deserialize a
+payload.
 
 ## What it is not
 
@@ -59,6 +73,7 @@ topics:
   /camera/*:          # glob patterns allowed; first match wins
     min_rate: 25
 
+# Parsed and validated, but not yet enforced -- no check consumes this in v0.1.
 transforms:
   required:
     - [camera_link, base_link]
