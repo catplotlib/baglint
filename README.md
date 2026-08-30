@@ -1,8 +1,72 @@
 # baglint
 
-Semantic validation for robotics datasets. Point it at an MCAP file and a YAML
-spec, and it tells you whether the recording is actually usable — with an exit
-code, so it can gate CI.
+Validates the contents of MCAP recordings against a declarative specification.
+Checks for missing topics, recording gaps and rate violations, and returns a
+non-zero exit status when a recording does not satisfy the specification.
+
+Validation of the MCAP container itself — chunk CRCs, index integrity — is out
+of scope. Use `mcap doctor` for that.
+
+## Requirements
+
+* Python 3.10 or later
+
+## Installation
+
+```console
+$ python3 -m venv .venv
+$ .venv/bin/pip install -e .
+```
+
+When ROS 2 is sourced, `/opt/ros/$ROS_DISTRO/lib/python3.*/site-packages` is on
+`PYTHONPATH` and is inherited by the virtual environment, which causes ROS
+pytest plugins to load during test runs. Clear it when invoking the tool:
+
+```console
+$ env -u PYTHONPATH .venv/bin/baglint --help
+```
+
+## Usage
+
+```console
+$ baglint BAG [-s SPEC] [-f {text,json}] [--strict]
+```
+
+| Option | Description |
+| --- | --- |
+| `-s`, `--spec` | Specification file to validate against |
+| `-f`, `--format` | Output format, `text` (default) or `json` |
+| `--strict` | Exit non-zero on `WARN` findings as well as `FAIL` |
+| `--version` | Print version and exit |
+
+## Specification
+
+Topic keys accept glob patterns. The first matching entry applies, so list
+specific topics before wildcards.
+
+```yaml
+topics:
+  /joint_states:
+    min_rate: 490
+    max_gap_ms: 10
+
+  /camera/*:
+    min_rate: 25
+
+  /diagnostics:
+    required: false
+```
+
+| Key | Type | Description |
+| --- | --- | --- |
+| `min_rate` | float | Minimum mean publication rate in Hz, measured over the topic's own span |
+| `max_gap_ms` | float | Maximum permitted interval between consecutive messages |
+| `required` | bool | Whether a topic named literally must be present. Default `true` |
+
+A `transforms.required` list of `[parent, child]` frame pairs is parsed and
+validated, but no check consumes it yet.
+
+## Output
 
 ```console
 $ baglint experiment_042.mcap --spec examples/demo_spec.yaml
@@ -21,85 +85,47 @@ FAIL /tf
 3 findings: 3 FAIL
 ```
 
-That is captured output, not an illustration. Reproduce it with:
+To regenerate the recording used above:
 
 ```console
 $ python examples/make_demo_bag.py experiment_042.mcap
-$ baglint experiment_042.mcap --spec examples/demo_spec.yaml
 ```
 
-The scan above reads 680,884 messages in about six seconds, single-threaded,
-because gap and rate analysis touch only `log_time` and never deserialize a
-payload.
+`--format json` emits the same findings for machine consumption. Each carries a
+stable `code`, intended for filtering and baselining in CI:
 
-## What it is not
+| Code | Level | Meaning |
+| --- | --- | --- |
+| `gap` | FAIL | Consecutive messages exceeded `max_gap_ms` |
+| `rate_below_min` | FAIL | Mean rate fell below `min_rate` |
+| `rate_unmeasurable` | FAIL | Fewer than two messages, so no rate can be computed |
+| `missing_topic` | FAIL | A required topic carried no messages |
 
-`mcap doctor` already validates MCAP *structure* — chunk CRCs, index integrity.
-baglint assumes the file is well-formed and asks a different question: is the
-data inside scientifically usable? Missing intervals, degraded rates, broken
-transform chains, clock skew between sensors.
+## Message timestamps
 
-## No ROS required
+Each message carries two timestamps, and findings state which one was used:
 
-MCAP embeds its own schemas, so baglint reads and decodes ROS 2 messages with
-no ROS installation anywhere on the machine. It is a plain `pip install` and it
-runs in any `python:3.12` CI container.
+| Timestamp | Set by | A defect indicates |
+| --- | --- | --- |
+| `log_time` | the recorder, on write | the recorder stalled: disk I/O, CPU starvation, a terminated node |
+| `header.stamp` | the publisher, at sample time | the sensor or its driver misbehaved |
 
-If you have ROS sourced in your shell, note that `/opt/ros/*/lib/python3.*/site-packages`
-lands on `PYTHONPATH` and leaks into every virtualenv — which will pull ROS's
-pytest plugins into this project's test run. The `Makefile` clears `PYTHONPATH`
-for exactly that reason.
-
-## The two clocks
-
-Every bag carries two independent notions of time, and conflating them is the
-usual bug in homegrown validation scripts:
-
-| Clock | Meaning | A defect here means |
-|---|---|---|
-| `log_time` | when the recorder wrote the message | the recorder stalled — disk I/O, CPU starvation, a dead node |
-| `header.stamp` | when the sensor sampled the data | the sensor or its driver misbehaved |
-
-Every finding states which clock it was measured against.
-
-## Spec
-
-```yaml
-topics:
-  /joint_states:
-    min_rate: 500
-    max_gap_ms: 10
-
-  /camera/*:          # glob patterns allowed; first match wins
-    min_rate: 25
-
-# Parsed and validated, but not yet enforced -- no check consumes this in v0.1.
-transforms:
-  required:
-    - [camera_link, base_link]
-```
+The checks in this release operate on `log_time`.
 
 ## Exit codes
 
-| Code | Meaning |
-|---|---|
-| 0 | no FAIL findings (add `--strict` to fail on WARN too) |
-| 1 | at least one FAIL |
-| 2 | bad invocation, unreadable bag, or malformed spec |
-
-Use `--format json` for machine-readable output. Every finding carries a stable
-`code` (`gap`, `rate_below_min`, `missing_topic`, ...) intended for filtering
-and baselining in CI — those strings are treated as public API.
-
-## Status
-
-v0.1 implements presence, gap and rate checks. Planned, in order:
-duplicate `header.stamp` detection, sustained rate-change detection, TF
-connectivity over time, and a sensor clock-offset estimator.
+| Code | Condition |
+| --- | --- |
+| 0 | No `FAIL` findings. With `--strict`, no `WARN` findings either |
+| 1 | At least one finding at or above the failing level |
+| 2 | Invalid arguments, unreadable recording, or malformed specification |
 
 ## Development
 
 ```console
-make install   # venv + editable install
-make test
+$ make install
+$ make test
 ```
+
+Tests construct MCAP recordings with injected defects at known offsets. See
+`tests/fixtures.py`.
