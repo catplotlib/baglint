@@ -3,8 +3,9 @@ from baglint.checks.gap import GapCheck
 from baglint.checks.presence import PresenceCheck
 from baglint.checks.rate import RateCheck
 from baglint.checks.stamp import StampCheck
+from baglint.checks.tf import TfCheck
 
-ALL_CHECKS = [PresenceCheck, GapCheck, RateCheck, StampCheck]
+ALL_CHECKS = [PresenceCheck, GapCheck, RateCheck, StampCheck, TfCheck]
 
 __all__ = [
     "Check",
@@ -14,5 +15,6 @@ __all__ = [
     "PresenceCheck",
     "RateCheck",
     "StampCheck",
+    "TfCheck",
     "ALL_CHECKS",
 ]

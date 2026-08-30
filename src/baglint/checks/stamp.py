@@ -46,6 +46,9 @@ class StampCheck:
     def __init__(self, spec: Spec):
         self._spec = spec
         self._states: dict[str, _TopicState] = {}
+        # The runner decodes the union of every check's requests, so payloads
+        # arrive here for topics this check never asked about.
+        self._enabled: set[str] = set()
 
     def decode_topics(self, topics: Iterable[str]) -> set[str]:
         enabled = set()
@@ -53,10 +56,11 @@ class StampCheck:
             ts = self._spec.for_topic(topic)
             if ts is not None and ts.check_stamps:
                 enabled.add(topic)
+        self._enabled = enabled
         return enabled
 
     def on_message(self, msg: Message) -> None:
-        if msg.decoded is None:
+        if msg.decoded is None or msg.topic not in self._enabled:
             return
 
         state = self._states.get(msg.topic)

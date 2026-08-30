@@ -30,10 +30,17 @@ class TopicSpec:
     check_stamps: bool = False
 
 
+# How long a transform stays usable after its last update before the edge is
+# treated as broken. tf2's own answer depends on configuration, so baglint
+# picks a forgiving default and states it.
+DEFAULT_MAX_STALE_MS = 500.0
+
+
 @dataclass(frozen=True)
 class Spec:
     topics: list[TopicSpec] = field(default_factory=list)
     required_transforms: list[tuple[str, str]] = field(default_factory=list)
+    transform_max_stale_ms: float = DEFAULT_MAX_STALE_MS
 
     @classmethod
     def empty(cls) -> "Spec":
@@ -70,13 +77,25 @@ class Spec:
                 )
             )
 
+        transforms_cfg = data.get("transforms") or {}
+        unknown = set(transforms_cfg) - {"required", "max_stale_ms"}
+        if unknown:
+            raise SpecError(
+                f"transforms: unknown key(s) {sorted(unknown)}; "
+                "valid keys are ['max_stale_ms', 'required']"
+            )
+
         transforms = []
-        for pair in ((data.get("transforms") or {}).get("required") or []):
+        for pair in (transforms_cfg.get("required") or []):
             if not isinstance(pair, (list, tuple)) or len(pair) != 2:
                 raise SpecError(f"transforms.required entries must be [parent, child] pairs, got {pair!r}")
             transforms.append((str(pair[0]), str(pair[1])))
 
-        return cls(topics=topics, required_transforms=transforms)
+        return cls(
+            topics=topics,
+            required_transforms=transforms,
+            transform_max_stale_ms=transforms_cfg.get("max_stale_ms", DEFAULT_MAX_STALE_MS),
+        )
 
     def for_topic(self, topic: str) -> TopicSpec | None:
         for ts in self.topics:

@@ -87,8 +87,22 @@ topics:
 | `required` | bool | Whether a topic named literally must be present. Default `true` |
 | `check_stamps` | bool | Validate `header.stamp` ordering. Default `false`, as it deserializes payloads |
 
-A `transforms.required` list of `[parent, child]` frame pairs is parsed and
-validated, but no check consumes it yet.
+### Transforms
+
+Required frame pairs are checked for availability across the recording:
+
+```yaml
+transforms:
+  required:
+    - [camera_link, base_link]
+  max_stale_ms: 500
+```
+
+Each pair is resolved through the transform tree, in either direction, since a
+transform can be inverted. `/tf_static` is treated as valid for the whole
+recording. A dynamic edge is usable from one update to the next and for
+`max_stale_ms` after its last, which defaults to 500. Reading transforms
+requires deserializing `/tf`, so it happens only when `required` is non-empty.
 
 ## Output
 
@@ -137,6 +151,8 @@ stable `code`, intended for filtering and baselining in CI:
 | `stamp_duplicate` | WARN | A message repeated the previous `header.stamp` |
 | `stamp_unset` | WARN | A message carried a zero `header.stamp` |
 | `stamp_unavailable` | WARN | `check_stamps` was set on a message type without a header |
+| `tf_unavailable` | FAIL | A required frame pair was unresolvable for some span |
+| `tf_frame_missing` | FAIL | A required frame never appeared in the transform tree |
 
 ## Message timestamps
 
