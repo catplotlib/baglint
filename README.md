@@ -51,7 +51,7 @@ way to produce a first one:
 
 ```console
 $ baglint good_run.mcap --init > spec.yaml
-$ baglint experiment_042.mcap --spec spec.yaml
+$ baglint run_028.mcap --spec spec.yaml
 ```
 
 `min_rate` is set below each topic's observed mean rate by `--margin`, and
@@ -107,36 +107,56 @@ requires deserializing `/tf`, so it happens only when `required` is non-empty.
 ## Output
 
 ```console
-$ baglint experiment_042.mcap --spec examples/demo_spec.yaml
-experiment_042.mcap
-  3 topics · 680,884 messages · 18m32s
+$ baglint run_028.mcap --spec examples/demo_spec.yaml
+run_028.mcap
+  6 topics · 86,095 messages · 2m00s
 
 FAIL /camera/image
-  rate 12.4 Hz below minimum 25 Hz  [log_time]
+  rate 24.0 Hz below minimum 25 Hz  [log_time]
+
+FAIL /diagnostics
+  only 1 message(s); too few to measure a rate against the 1 Hz minimum  [log_time]
+
+FAIL /imu
+  1 stamp(s) moved backwards (worst 190.0 ms at 50.00 s)  [header.stamp]
 
 FAIL /joint_states
-  3 missing interval(s) >10 ms (worst 122.0 ms at 904.00 s)  [log_time]
+  2 missing interval(s) >10 ms (worst 112.0 ms at 88.50 s)  [log_time]
 
-FAIL /tf
+FAIL /scan
   required by spec but no messages in bag
 
-3 findings: 3 FAIL
+FAIL /tf
+  camera_link -> base_link unavailable for 13.52 s across 1 interval(s) (worst 13.52 s at 60.48 s)  [header.stamp]
+
+WARN /imu
+  18 message(s) repeated the previous stamp  [header.stamp]
+
+WARN /imu
+  6 message(s) carried a zero stamp  [header.stamp]
+
+8 findings: 6 FAIL, 2 WARN
 ```
 
 To regenerate the recording used above:
 
 ```console
-$ python examples/make_demo_bag.py experiment_042.mcap
+$ python examples/make_demo_bag.py run_028.mcap
 ```
 
 `--format html` writes a self-contained report with one track per topic on a
 shared time axis, showing where each defect falls and whether defects on
-different topics coincide. It embeds its styles and fetches nothing, so it can
-be published as a CI artifact:
+different topics coincide:
 
 ```console
-$ baglint experiment_042.mcap --spec spec.yaml --format html > report.html
+$ baglint run_028.mcap --spec examples/demo_spec.yaml --format html > report.html
 ```
+
+![baglint HTML report](https://raw.githubusercontent.com/catplotlib/baglint/main/docs/report.png)
+
+Grey marks when a topic was recorded, red a failure, amber a warning. A topic
+struck through was never recorded at all. The report embeds its styles and
+fetches nothing, so it can be published as a CI artifact.
 
 `--format json` emits the same findings for machine consumption. Each carries a
 stable `code`, intended for filtering and baselining in CI:

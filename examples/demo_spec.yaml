@@ -1,14 +1,23 @@
 # Spec used for the README's example output, against examples/make_demo_bag.py.
 topics:
   /joint_states:
-    min_rate: 490      # tolerance below the nominal 500 Hz loop rate
+    min_rate: 450
     max_gap_ms: 10
 
   /camera/image:
     min_rate: 25
 
   /imu:
-    min_rate: 100
+    min_rate: 90
+    check_stamps: true
 
-  /tf:
+  /scan:
     min_rate: 10
+
+  /diagnostics:
+    min_rate: 1
+
+transforms:
+  required:
+    - [camera_link, base_link]
+  max_stale_ms: 500
