@@ -53,3 +53,13 @@ def test_strict_promotes_warnings(tmp_path):
     report = Report(path=tmp_path, findings=[warn], topic_count=1, message_count=1, duration_s=1.0)
     assert report.exit_code() == 0
     assert report.exit_code(strict=True) == 1
+
+
+def test_version_matches_installed_metadata():
+    """The build reads its version from __init__, so these cannot disagree.
+    They did once: 0.2.0 shipped reporting 0.1.0."""
+    from importlib.metadata import version
+
+    import baglint
+
+    assert baglint.__version__ == version("baglint")

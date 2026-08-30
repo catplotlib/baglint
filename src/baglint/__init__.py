@@ -1,4 +1,4 @@
-__version__ = "0.1.0"
+__version__ = "0.2.1"
 
 from baglint.findings import Clock, Finding, Level
 from baglint.runner import run

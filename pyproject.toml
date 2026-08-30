@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "baglint"
-version = "0.2.0"
+dynamic = ["version"]
 description = "Validates the contents of MCAP recordings against a declarative specification"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -34,6 +34,9 @@ dev = ["pytest>=8.0"]
 
 [project.scripts]
 baglint = "baglint.cli:main"
+
+[tool.hatch.version]
+path = "src/baglint/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/baglint"]
