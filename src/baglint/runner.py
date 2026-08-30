@@ -22,9 +22,11 @@ def scan(path: str | Path, spec: Spec | None = None, checks=()) -> ScanResult:
     Passing no checks collects timing only, which is what spec generation needs.
     """
     ctx = RunContext(spec=spec or Spec.empty())
-    wants_decoded = frozenset().union(*(c.wants_decoded for c in checks)) if checks else frozenset()
 
     with McapBagReader(path) as reader:
+        topics = [c.topic for c in reader.channels()]
+        wants_decoded = set().union(*(c.decode_topics(topics) for c in checks)) if checks else set()
+
         for msg in reader.iter_messages(decode=wants_decoded):
             stat = ctx.stats.get(msg.topic)
             if stat is None:

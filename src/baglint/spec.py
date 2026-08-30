@@ -18,7 +18,7 @@ class SpecError(ValueError):
     pass
 
 
-_TOPIC_KEYS = {"min_rate", "max_gap_ms", "required"}
+_TOPIC_KEYS = {"min_rate", "max_gap_ms", "required", "check_stamps"}
 
 
 @dataclass(frozen=True)
@@ -27,6 +27,7 @@ class TopicSpec:
     min_rate: float | None = None
     max_gap_ms: float | None = None
     required: bool = True
+    check_stamps: bool = False
 
 
 @dataclass(frozen=True)
@@ -65,6 +66,7 @@ class Spec:
                     min_rate=cfg.get("min_rate"),
                     max_gap_ms=cfg.get("max_gap_ms"),
                     required=cfg.get("required", True),
+                    check_stamps=cfg.get("check_stamps", False),
                 )
             )
 

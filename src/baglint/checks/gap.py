@@ -18,7 +18,9 @@ class GapCheck:
     from reporting a spurious gap against the bag's own boundaries.
     """
 
-    wants_decoded = frozenset()
+    def decode_topics(self, topics):
+        return set()
+
 
     def __init__(self, spec: Spec):
         self._spec = spec

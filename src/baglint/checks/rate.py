@@ -12,7 +12,9 @@ class RateCheck:
     Pure finalize: the runner already accumulates the timing this needs.
     """
 
-    wants_decoded = frozenset()
+    def decode_topics(self, topics):
+        return set()
+
 
     def __init__(self, spec: Spec):
         self._spec = spec

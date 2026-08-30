@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Iterable, Protocol
 
 from baglint.findings import Finding
 from baglint.reader import Message
@@ -69,11 +69,16 @@ class Check(Protocol):
     """A streaming accumulator.
 
     Checks see every message once, in log_time order, then report at the end.
-    ``wants_decoded`` names the topics whose payloads must be deserialized;
-    keep it empty unless the check actually reads message fields.
+    Payload deserialization is opt-in per check, via decode_topics().
     """
 
-    wants_decoded: frozenset[str]
+    def decode_topics(self, topics: Iterable[str]) -> set[str]:
+        """Topics whose payloads this check needs deserialized.
+
+        Resolved against the bag's actual channel list so spec globs can be
+        expanded. Return an empty set unless message fields are actually read.
+        """
+        ...
 
     def on_message(self, msg: Message) -> None: ...
 

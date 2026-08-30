@@ -14,7 +14,9 @@ class PresenceCheck:
     present.
     """
 
-    wants_decoded = frozenset()
+    def decode_topics(self, topics):
+        return set()
+
 
     def __init__(self, spec: Spec):
         self._spec = spec

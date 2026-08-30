@@ -40,7 +40,7 @@ class TopicBuilder:
     duration: float
     frame_id: str = "test_frame"
     log_times: list[float] = field(default_factory=list)
-    stamps: list[float] = field(default_factory=list)
+    stamps: list[float | None] = field(default_factory=list)  # None writes a zero stamp
 
     def __post_init__(self) -> None:
         n = int(round(self.duration * self.rate))
@@ -71,6 +71,20 @@ class TopicBuilder:
         driver would, while log_time keeps advancing normally."""
         for i in range(at_index, min(at_index + count, len(self.stamps))):
             self.stamps[i] = self.stamps[i - 1]
+        return self
+
+    def rewind_stamps(self, count: int = 1, at_index: int = 10, ms: float = 100.0) -> "TopicBuilder":
+        """Move `count` header stamps backwards, as a driver resetting its clock
+        would, while log_time keeps advancing normally."""
+        for i in range(at_index, min(at_index + count, len(self.stamps))):
+            self.stamps[i] -= ms / 1000.0
+        return self
+
+    def unset_stamps(self, count: int = 1, at_index: int = 10) -> "TopicBuilder":
+        """Leave `count` header stamps at zero, as a driver that never populates
+        the header would."""
+        for i in range(at_index, min(at_index + count, len(self.stamps))):
+            self.stamps[i] = None
         return self
 
     def rate_change(self, at: float, new_rate: float) -> "TopicBuilder":
@@ -105,7 +119,7 @@ class SynthBag:
             writer = Writer(f)
             schema = writer.register_msgdef("test_msgs/msg/Stamped", STAMPED_MSGDEF)
             for log_time_ns, tb, stamp_t in records:
-                stamp_ns = BASE_EPOCH_NS + int(round(stamp_t * 1e9))
+                stamp_ns = 0 if stamp_t is None else BASE_EPOCH_NS + int(round(stamp_t * 1e9))
                 writer.write_message(
                     topic=tb.name,
                     schema=schema,

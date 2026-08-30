@@ -4,8 +4,8 @@ Validates the contents of MCAP recordings against a declarative specification.
 Checks for missing topics, recording gaps and rate violations, and returns a
 non-zero exit status when a recording does not satisfy the specification.
 
-Validation of the MCAP container itself — chunk CRCs, index integrity — is out
-of scope. Use `mcap doctor` for that.
+Validation of the MCAP container itself, such as chunk CRCs and index
+integrity, is out of scope. Use `mcap doctor` for that.
 
 ## Requirements
 
@@ -85,6 +85,7 @@ topics:
 | `min_rate` | float | Minimum mean publication rate in Hz, measured over the topic's own span |
 | `max_gap_ms` | float | Maximum permitted interval between consecutive messages |
 | `required` | bool | Whether a topic named literally must be present. Default `true` |
+| `check_stamps` | bool | Validate `header.stamp` ordering. Default `false`, as it deserializes payloads |
 
 A `transforms.required` list of `[parent, child]` frame pairs is parsed and
 validated, but no check consumes it yet.
@@ -123,6 +124,10 @@ stable `code`, intended for filtering and baselining in CI:
 | `rate_below_min` | FAIL | Mean rate fell below `min_rate` |
 | `rate_unmeasurable` | FAIL | Fewer than two messages, so no rate can be computed |
 | `missing_topic` | FAIL | A required topic carried no messages |
+| `stamp_backwards` | FAIL | A `header.stamp` preceded the stamp before it |
+| `stamp_duplicate` | WARN | A message repeated the previous `header.stamp` |
+| `stamp_unset` | WARN | A message carried a zero `header.stamp` |
+| `stamp_unavailable` | WARN | `check_stamps` was set on a message type without a header |
 
 ## Message timestamps
 
@@ -133,7 +138,23 @@ Each message carries two timestamps, and findings state which one was used:
 | `log_time` | the recorder, on write | the recorder stalled: disk I/O, CPU starvation, a terminated node |
 | `header.stamp` | the publisher, at sample time | the sensor or its driver misbehaved |
 
-The checks in this release operate on `log_time`.
+Gap and rate checks read `log_time`. Stamp checks read `header.stamp` and are
+enabled per topic with `check_stamps`, which is off by default because it
+requires deserializing every message on that topic:
+
+```yaml
+topics:
+  /imu:
+    check_stamps: true
+```
+
+A stamp that moves backwards is reported as a failure. Downstream consumers
+such as tf2, `message_filters` and the SLAM backends assume a non-decreasing
+stamp sequence per topic, and do not report the violation themselves. Duplicate and zero stamps
+are reported as warnings.
+
+A zero stamp is treated as never populated rather than as a timestamp, so it
+does not become the baseline for the messages that follow it.
 
 ## Exit codes
 
