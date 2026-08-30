@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from baglint import __version__
+from baglint.html import render as render_html
 from baglint.init import DEFAULT_MARGIN, generate_spec
 from baglint.runner import run
 from baglint.spec import Spec, SpecError
@@ -17,7 +18,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("bag", type=Path, help="path to an .mcap file")
     p.add_argument("-s", "--spec", type=Path, help="YAML spec to validate against")
-    p.add_argument("-f", "--format", choices=("text", "json"), default="text")
+    p.add_argument("-f", "--format", choices=("text", "json", "html"), default="text")
     p.add_argument("--strict", action="store_true", help="exit non-zero on WARN as well as FAIL")
     p.add_argument(
         "--init",
@@ -61,7 +62,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"baglint: failed to read {args.bag}: {exc}", file=sys.stderr)
         return 2
 
-    print(report.to_json() if args.format == "json" else report.to_text())
+    if args.format == "json":
+        print(report.to_json())
+    elif args.format == "html":
+        print(render_html(report), end="")
+    else:
+        print(report.to_text())
     return report.exit_code(strict=args.strict)
 
 

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from baglint.checks import ALL_CHECKS, RunContext, TopicStat
 from baglint.reader import McapBagReader
-from baglint.report import Report
+from baglint.report import Report, TopicSummary
 from baglint.spec import Spec
 
 
@@ -55,9 +55,21 @@ def run(path: str | Path, spec: Spec | None = None, check_classes=None) -> Repor
 
     findings = [f for check in checks for f in check.finalize(result.ctx)]
 
+    topics = [
+        TopicSummary(
+            topic=stat.topic,
+            count=stat.count,
+            rate_hz=stat.rate_hz,
+            start_s=result.ctx.rel_s(stat.first_ns) if stat.first_ns is not None else 0.0,
+            end_s=result.ctx.rel_s(stat.last_ns) if stat.last_ns is not None else 0.0,
+        )
+        for stat in sorted(result.ctx.stats.values(), key=lambda s: s.topic)
+    ]
+
     return Report(
         path=Path(path),
         findings=findings,
+        topics=topics,
         topic_count=result.topic_count,
         message_count=result.message_count,
         duration_s=result.ctx.duration_s,

@@ -1,10 +1,19 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from baglint.findings import Finding, Level
+
+
+@dataclass
+class TopicSummary:
+    topic: str
+    count: int
+    rate_hz: float | None
+    start_s: float
+    end_s: float
 
 _LEVEL_ORDER = {Level.FAIL: 0, Level.WARN: 1, Level.INFO: 2}
 
@@ -28,6 +37,7 @@ class Report:
     message_count: int
     duration_s: float
     spec_provided: bool = True
+    topics: list["TopicSummary"] = field(default_factory=list)
 
     def counts(self) -> dict[Level, int]:
         out = {Level.FAIL: 0, Level.WARN: 0, Level.INFO: 0}

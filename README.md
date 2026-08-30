@@ -36,7 +36,7 @@ $ baglint BAG --init [--margin FRACTION]
 | Option | Description |
 | --- | --- |
 | `-s`, `--spec` | Specification file to validate against |
-| `-f`, `--format` | Output format, `text` (default) or `json` |
+| `-f`, `--format` | Output format, `text` (default), `json` or `html` |
 | `--strict` | Exit non-zero on `WARN` findings as well as `FAIL` |
 | `--init` | Print a specification generated from the recording instead of validating it |
 | `--margin` | With `--init`, the fraction below the observed rate at which to set `min_rate`. Default `0.1` |
@@ -113,6 +113,15 @@ To regenerate the recording used above:
 
 ```console
 $ python examples/make_demo_bag.py experiment_042.mcap
+```
+
+`--format html` writes a self-contained report with one track per topic on a
+shared time axis, showing where each defect falls and whether defects on
+different topics coincide. It embeds its styles and fetches nothing, so it can
+be published as a CI artifact:
+
+```console
+$ baglint experiment_042.mcap --spec spec.yaml --format html > report.html
 ```
 
 `--format json` emits the same findings for machine consumption. Each carries a
