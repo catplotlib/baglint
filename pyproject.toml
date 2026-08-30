@@ -5,14 +5,29 @@ build-backend = "hatchling.build"
 [project]
 name = "baglint"
 version = "0.1.0"
-description = "Semantic validation for robotics datasets (MCAP / rosbag2)"
+description = "Validates the contents of MCAP recordings against a declarative specification"
 readme = "README.md"
 requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["mcap", "rosbag", "ros2", "robotics", "validation", "linter"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Quality Assurance",
+]
 dependencies = [
     "mcap>=1.2",
     "mcap-ros2-support>=0.5",
     "pyyaml>=6.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/catplotlib/baglint"
+Issues = "https://github.com/catplotlib/baglint/issues"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
