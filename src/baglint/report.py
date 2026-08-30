@@ -27,6 +27,7 @@ class Report:
     topic_count: int
     message_count: int
     duration_s: float
+    spec_provided: bool = True
 
     def counts(self) -> dict[Level, int]:
         out = {Level.FAIL: 0, Level.WARN: 0, Level.INFO: 0}
@@ -65,7 +66,11 @@ class Report:
         )
         lines += ["", f"{len(self.findings)} findings" + (f": {summary}" if summary else "")]
         if not self.findings:
-            lines[-1] = "no findings — bag satisfies the spec"
+            lines[-1] = (
+                "no findings — recording satisfies the spec"
+                if self.spec_provided
+                else "no spec given — nothing was validated (generate one with --init)"
+            )
         return "\n".join(lines)
 
     def to_json(self) -> str:

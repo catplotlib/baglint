@@ -16,12 +16,19 @@ class TopicStat:
     count: int = 0
     first_ns: int | None = None
     last_ns: int | None = None
+    max_interval_ns: int = 0
 
     def observe(self, log_time_ns: int) -> None:
         if self.first_ns is None:
             self.first_ns = log_time_ns
+        else:
+            self.max_interval_ns = max(self.max_interval_ns, log_time_ns - self.last_ns)
         self.last_ns = log_time_ns
         self.count += 1
+
+    @property
+    def max_interval_ms(self) -> float:
+        return self.max_interval_ns / 1e6
 
     @property
     def span_s(self) -> float:

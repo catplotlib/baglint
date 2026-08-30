@@ -56,3 +56,22 @@ def test_bad_spec_exits_two(tmp_path, capsys):
 
     assert main([str(bag.write()), "--spec", str(spec)]) == 2
     assert "bad spec" in capsys.readouterr().err
+
+
+def test_no_spec_reports_that_nothing_was_validated(tmp_path, capsys):
+    bag = SynthBag(tmp_path / "bag.mcap")
+    bag.topic("/joint_states", rate=500)
+
+    assert main([str(bag.write())]) == 0
+    assert "nothing was validated" in capsys.readouterr().out
+
+
+def test_init_prints_a_usable_spec(tmp_path, capsys):
+    import yaml as _yaml
+
+    bag = SynthBag(tmp_path / "bag.mcap")
+    bag.topic("/joint_states", rate=500)
+
+    assert main([str(bag.write()), "--init"]) == 0
+    parsed = _yaml.safe_load(capsys.readouterr().out)
+    assert "/joint_states" in parsed["topics"]

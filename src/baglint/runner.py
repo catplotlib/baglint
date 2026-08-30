@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from baglint.checks import ALL_CHECKS, RunContext, TopicStat
@@ -8,13 +9,20 @@ from baglint.report import Report
 from baglint.spec import Spec
 
 
-def run(path: str | Path, spec: Spec | None = None, check_classes=None) -> Report:
-    """Single streaming pass over a bag, feeding every check."""
-    spec = spec or Spec.empty()
-    checks = [cls(spec) for cls in (check_classes or ALL_CHECKS)]
+@dataclass
+class ScanResult:
+    ctx: RunContext
+    topic_count: int
+    message_count: int
 
+
+def scan(path: str | Path, spec: Spec | None = None, checks=()) -> ScanResult:
+    """Single streaming pass over a bag, feeding each check every message.
+
+    Passing no checks collects timing only, which is what spec generation needs.
+    """
+    ctx = RunContext(spec=spec or Spec.empty())
     wants_decoded = frozenset().union(*(c.wants_decoded for c in checks)) if checks else frozenset()
-    ctx = RunContext(spec=spec)
 
     with McapBagReader(path) as reader:
         for msg in reader.iter_messages(decode=wants_decoded):
@@ -30,15 +38,26 @@ def run(path: str | Path, spec: Spec | None = None, check_classes=None) -> Repor
         lasts = [s.last_ns for s in ctx.stats.values() if s.last_ns is not None]
         ctx.start_ns = reader.start_ns or (min(firsts) if firsts else 0)
         ctx.end_ns = reader.end_ns or (max(lasts) if lasts else 0)
-        topic_count = len(reader.channels())
-        message_count = reader.message_count or sum(s.count for s in ctx.stats.values())
 
-    findings = [f for check in checks for f in check.finalize(ctx)]
+        return ScanResult(
+            ctx=ctx,
+            topic_count=len(reader.channels()),
+            message_count=reader.message_count or sum(s.count for s in ctx.stats.values()),
+        )
+
+
+def run(path: str | Path, spec: Spec | None = None, check_classes=None) -> Report:
+    spec = spec or Spec.empty()
+    checks = [cls(spec) for cls in (check_classes or ALL_CHECKS)]
+    result = scan(path, spec, checks)
+
+    findings = [f for check in checks for f in check.finalize(result.ctx)]
 
     return Report(
         path=Path(path),
         findings=findings,
-        topic_count=topic_count,
-        message_count=message_count,
-        duration_s=ctx.duration_s,
+        topic_count=result.topic_count,
+        message_count=result.message_count,
+        duration_s=result.ctx.duration_s,
+        spec_provided=bool(spec.topics or spec.required_transforms),
     )

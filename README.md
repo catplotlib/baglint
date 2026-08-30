@@ -30,6 +30,7 @@ $ env -u PYTHONPATH .venv/bin/baglint --help
 
 ```console
 $ baglint BAG [-s SPEC] [-f {text,json}] [--strict]
+$ baglint BAG --init [--margin FRACTION]
 ```
 
 | Option | Description |
@@ -37,7 +38,29 @@ $ baglint BAG [-s SPEC] [-f {text,json}] [--strict]
 | `-s`, `--spec` | Specification file to validate against |
 | `-f`, `--format` | Output format, `text` (default) or `json` |
 | `--strict` | Exit non-zero on `WARN` findings as well as `FAIL` |
+| `--init` | Print a specification generated from the recording instead of validating it |
+| `--margin` | With `--init`, the fraction below the observed rate at which to set `min_rate`. Default `0.1` |
 | `--version` | Print version and exit |
+
+Without `-s`, no checks run and nothing is validated.
+
+## Generating a specification
+
+`--init` writes a specification describing a recording, which is the practical
+way to produce a first one:
+
+```console
+$ baglint good_run.mcap --init > spec.yaml
+$ baglint experiment_042.mcap --spec spec.yaml
+```
+
+`min_rate` is set below each topic's observed mean rate by `--margin`, and
+`max_gap_ms` to twice the worst interval observed. Topics with fewer than ten
+messages are generated as presence-only, since a mean rate over so few samples
+describes the recording length rather than the publisher.
+
+The bounds describe the recording they came from, defects included. Generate
+from a run that is known to be good, and treat the result as a starting point.
 
 ## Specification
 
